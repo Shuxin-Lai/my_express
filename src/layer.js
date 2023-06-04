@@ -6,10 +6,24 @@ exports = module.exports = class Layer {
     this.route = null
   }
 
-  handle_request(req, res) {
+  handle_request(req, res, next) {
     const fn = this.handle
-    if (fn) {
-      fn(req, res)
+    try {
+      fn(req, res, next)
+    } catch (err) {
+      next(err)
+    }
+  }
+
+  handle_error(error, req, res, next) {
+    const fn = this.handle
+    if (fn.length !== 4) {
+      return next(error)
+    }
+    try {
+      fn(error, req, res, next)
+    } catch (err) {
+      next(err)
     }
   }
 

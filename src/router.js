@@ -5,21 +5,19 @@ const Route = require('./route')
 exports = module.exports = class Router {
   constructor() {
     this.stack = [
-      new Layer('*', (req, res) => {
-        res.writeHead(404, {
-          'Content-Type': 'text/plain',
-        })
-        res.end('404 Not Found')
-      }),
+      // new Layer('*', (req, res) => {
+      //   res.writeHead(404, {
+      //     'Content-Type': 'text/plain',
+      //   })
+      //   res.end('404 Not Found')
+      // }),
     ]
     this._initMethods()
   }
 
   route(path) {
     const route = new Route(path)
-    const layer = new Layer(path, (req, res) => {
-      route.dispatch(req, res)
-    })
+    const layer = new Layer(path, route.dispatch.bind(route))
 
     layer.route = route
     this.stack.push(layer)
@@ -37,18 +35,33 @@ exports = module.exports = class Router {
     })
   }
 
-  handle(req, res) {
-    for (let i = 1; i < this.stack.length; i++) {
-      const layer = this.stack[i]
+  handle(req, res, done) {
+    const stack = this.stack
+    let index = 0
+    const method = req.method.toLowerCase()
+
+    function next(err) {
+      let layerError = err === 'route' ? null : err
+
+      if (layerError === 'router') {
+        return done(null)
+      }
+
+      if (index >= stack.length) {
+        return done(layerError)
+      }
+      const layer = stack[index++]
       if (
         layer.match(req.url) &&
         layer.route &&
-        layer.route.handle_method(req.method)
+        layer.route.handle_method(method)
       ) {
-        return layer.handle_request(req, res)
+        return layer.handle_request(req, res, next)
+      } else {
+        return next(layerError)
       }
     }
 
-    return this.stack[0].handle_request(req, res)
+    next()
   }
 }

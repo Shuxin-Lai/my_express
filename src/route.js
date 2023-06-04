@@ -27,14 +27,36 @@ exports = module.exports = class Route {
     return Boolean(this.methods[name])
   }
 
-  dispatch(req, res) {
+  dispatch(req, res, done) {
     const method = req.method.toLowerCase()
+    let index = 0
+    const stack = this.stack
 
-    for (let i = 0; i < this.stack.length; i++) {
-      const layer = this.stack[i]
-      if (layer.method === method) {
-        return layer.handle_request(req, res)
+    function next(err) {
+      if (err && err == 'route') {
+        return done()
+      }
+      if (err && err == 'router') {
+        return done(err)
+      }
+
+      if (index >= stack.length) {
+        return done(err)
+      }
+
+      const layer = stack[index++]
+      if (layer.method !== method) {
+        return next(err)
+      }
+
+      if (err) {
+        // return done(err)
+        layer.handle_error(err, req, res, next)
+      } else {
+        layer.handle_request(req, res, next)
       }
     }
+
+    next()
   }
 }
