@@ -1,11 +1,20 @@
 const http = require('http')
 const Router = require('./router')
+const METHODS = require('./methods')
+class Application {
+  constructor() {
+    this._router = new Router()
+    this._initMethods()
+  }
 
-const application = {
-  _router: new Router(),
-  get(path, handle) {
-    this._router.get(path, handle)
-  },
+  _initMethods() {
+    METHODS.forEach(method => {
+      this[method] = function () {
+        this._router[method].apply(this._router, arguments)
+      }
+    })
+  }
+
   listen() {
     const server = http.createServer((req, res) => {
       if (!res.send) {
@@ -30,7 +39,7 @@ const application = {
     })
 
     server.listen.apply(server, arguments)
-  },
+  }
 }
 
-exports = module.exports = application
+exports = module.exports = Application

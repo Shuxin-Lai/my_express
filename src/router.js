@@ -1,37 +1,54 @@
+const Layer = require('./layer')
+const METHODS = require('./methods')
+const Route = require('./route')
+
 exports = module.exports = class Router {
   constructor() {
     this.stack = [
-      {
-        path: '*',
-        method: '*',
-        handle(req, res) {
-          res.writeHead(404, {
-            'Content-Type': 'text/plain',
-          })
-          res.end('404 Not Found')
-        },
-      },
+      new Layer('*', (req, res) => {
+        res.writeHead(404, {
+          'Content-Type': 'text/plain',
+        })
+        res.end('404 Not Found')
+      }),
     ]
+    this._initMethods()
   }
 
-  get(path, handle) {
-    this.stack.push({
-      path,
-      method: 'GET',
-      handle,
+  route(path) {
+    const route = new Route(path)
+    const layer = new Layer(path, (req, res) => {
+      route.dispatch(req, res)
+    })
+
+    layer.route = route
+    this.stack.push(layer)
+
+    return route
+  }
+
+  _initMethods() {
+    METHODS.forEach(method => {
+      this[method] = (path, handle) => {
+        const route = this.route(path)
+        route[method](handle)
+        return this
+      }
     })
   }
+
   handle(req, res) {
     for (let i = 1; i < this.stack.length; i++) {
-      const route = this.stack[i]
+      const layer = this.stack[i]
       if (
-        (req.url === route.path || route.path === '*') &&
-        (req.method === route.method || route.method === '*')
+        layer.match(req.url) &&
+        layer.route &&
+        layer.route.handle_method(req.method)
       ) {
-        return route.handle(req, res)
+        return layer.handle_request(req, res)
       }
     }
 
-    return this.stack[0].handle && this.stack[0].handle(req, res)
+    return this.stack[0].handle_request(req, res)
   }
 }

@@ -1,5 +1,5 @@
-const app = require('./application')
+const Application = require('./application')
 
 exports = module.exports = function createApplication() {
-  return app
+  return new Application()
 }

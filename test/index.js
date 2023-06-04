@@ -7,7 +7,19 @@ app.get('/', (req, res) => {
 })
 app.get('/json', (req, res) => {
   res.json({
-    name: 'express',
+    name: 'get',
+  })
+})
+
+app.put('/json', (req, res) => {
+  res.json({
+    name: 'put',
+  })
+})
+
+app.post('/json', (req, res) => {
+  res.json({
+    name: 'post',
   })
 })
 
